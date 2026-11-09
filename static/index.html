@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mokuro</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #f4f1ea;
+  --panel: #fffdf8;
+  --panel-2: #f8f5ee;
+  --ink: #1d1b18;
+  --ink-2: #5c574f;
+  --ink-3: #8f897e;
+  --line: #e4ded2;
+  --accent: #c8462c;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7e3dc;
+  --ok: #2f7d4f;
+  --ok-soft: #dff0e5;
+  --warn: #a36a00;
+  --warn-soft: #f8ecd2;
+  --bad: #b3261e;
+  --bad-soft: #f9dedb;
+  --info: #2c5d9e;
+  --info-soft: #dde8f6;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Roboto, sans-serif;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(40,30,10,.06), 0 4px 16px rgba(40,30,10,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141311;
+    --panel: #1c1b18;
+    --panel-2: #23211e;
+    --ink: #ece7dd;
+    --ink-2: #b3ada2;
+    --ink-3: #7d786f;
+    --line: #302d28;
+    --accent: #e0644a;
+    --accent-ink: #1a0f0b;
+    --accent-soft: #3a211b;
+    --ok: #6cc28c;
+    --ok-soft: #1c3226;
+    --warn: #e2ad4c;
+    --warn-soft: #382c14;
+    --bad: #f07a70;
+    --bad-soft: #3d1d1a;
+    --info: #7fb0ef;
+    --info-soft: #1b2a3e;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.hidden { display: none !important; }
+
+/* ---------- header ---------- */
+header {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 24px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand .mark { width: 32px; height: 32px; display: block; }
+.brand h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
+.brand small { color: var(--ink-3); font-size: 12px; display: block; margin-top: -2px; }
+
+.gpu {
+  display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 12.5px;
+}
+.gpu .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.gpu.cpu .dot { background: var(--warn); }
+.gpu .name { font-weight: 600; white-space: nowrap; }
+.gpu .metric { color: var(--ink-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.meter { width: 44px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--ink-2); transition: width .4s; }
+
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); user-select: none; cursor: pointer; }
+.switch { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--line); transition: background .2s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s; }
+.toggle input { display: none; }
+.toggle input:checked + .switch { background: var(--accent); }
+.toggle input:checked + .switch::after { transform: translateX(14px); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+  font-size: 13px; font-weight: 500; white-space: nowrap; transition: background .15s, border-color .15s;
+}
+.btn:hover { background: var(--panel-2); border-color: color-mix(in srgb, var(--ink-3) 40%, var(--line)); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.sm { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 6px; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
+.btn.ghost:hover { background: var(--panel-2); color: var(--ink); }
+.btn.danger:hover { color: var(--bad); border-color: var(--bad); }
+.btn svg { width: 15px; height: 15px; }
+
+/* ---------- layout ---------- */
+main {
+  display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 20px;
+  padding: 20px 24px 120px; max-width: 1500px; margin: 0 auto;
+}
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; padding: 16px 16px 120px; gap: 16px; }
+  header { padding: 10px 16px; }
+  main > aside { display: contents; }
+  #libCard { order: 3; }
+  #recentCard { order: 4; }
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: none !important; }
+aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.card-h { display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; }
+.card-h h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); margin: 0; font-weight: 600; margin-right: auto; }
+.card-b { padding: 0 14px 14px; }
+.empty { color: var(--ink-3); font-size: 13px; padding: 4px 0 2px; }
+
+/* now processing */
+.now-title { font-weight: 600; font-size: 15px; word-break: break-word; }
+.now-series { color: var(--ink-3); font-size: 12.5px; margin-bottom: 10px; word-break: break-word; }
+.progress { height: 8px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); transition: width .5s ease; border-radius: 5px; }
+.progress.indet i {
+  width: 40% !important; animation: slide 1.3s ease-in-out infinite;
+}
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.now-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.now-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+/* lists */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.list li:first-child { border-top: 0; }
+.list .grow { flex: 1; min-width: 0; }
+.list .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list .sub { color: var(--ink-3); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list .num { color: var(--ink-3); font-variant-numeric: tabular-nums; width: 18px; text-align: right; font-size: 12px; flex: none; }
+.list .remove { opacity: 0; }
+.list li:hover .remove { opacity: 1; }
+@media (hover: none) { .list .remove { opacity: 1; } }
+
+/* badges */
+.badge { display: inline-flex; align-items: center; gap: 5px; height: 21px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; flex: none; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.b-done { background: var(--ok-soft); color: var(--ok); }
+.b-pending { background: var(--panel-2); color: var(--ink-2); border: 1px solid var(--line); }
+.b-settling { background: var(--panel-2); color: var(--ink-3); border: 1px dashed var(--line); }
+.b-queued { background: var(--info-soft); color: var(--info); }
+.b-processing { background: var(--accent-soft); color: var(--accent); }
+.b-processing::before { animation: pulse 1s ease-in-out infinite; }
+.b-failed { background: var(--bad-soft); color: var(--bad); }
+.b-cancelled { background: var(--warn-soft); color: var(--warn); }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* library */
+.lib-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 14px 12px; }
+.search { flex: 1 1 200px; position: relative; }
+.search input { width: 100%; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); padding: 0 10px 0 32px; outline: none; }
+.search input:focus { border-color: var(--accent); background: var(--panel); }
+.search svg { position: absolute; left: 10px; top: 9px; width: 14px; height: 14px; color: var(--ink-3); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font-size: 12.5px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.chip b { font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip.on b { color: inherit; opacity: .7; }
+
+.series { border-top: 1px solid var(--line); }
+.series-h { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; }
+.series-h:hover { background: var(--panel-2); }
+.chev { width: 14px; height: 14px; color: var(--ink-3); transition: transform .15s; flex: none; }
+.series.closed .chev { transform: rotate(-90deg); }
+.series.closed .vols { display: none; }
+.series-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.series-stat { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; flex: none; }
+.mini { width: 60px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.mini i { display: block; height: 100%; background: var(--ok); }
+.vols { padding: 0 0 6px; }
+.vol { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 6px 14px 6px 38px; font-size: 13px; }
+.vol:hover { background: var(--panel-2); }
+.vol .vn { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.vol .vn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kind { font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; flex: none; }
+.vol .err { grid-column: 1 / -1; color: var(--bad); font-family: var(--mono); font-size: 11.5px; background: var(--bad-soft); padding: 6px 8px; border-radius: 6px; word-break: break-word; }
+.vol .act { display: flex; gap: 4px; justify-content: flex-end; min-width: 76px; }
+@media (max-width: 600px) { .vol { padding-left: 16px; } }
+
+/* log drawer */
+.log {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -4px 20px rgba(0,0,0,.06);
+}
+.log-h { display: flex; align-items: center; gap: 10px; padding: 8px 24px; cursor: pointer; user-select: none; font-size: 12.5px; }
+.log-h .last { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.log-h strong { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.log pre {
+  margin: 0; height: 0; overflow: auto; padding: 0 24px; font: 12px/1.6 var(--mono); color: var(--ink-2);
+  transition: height .2s; white-space: pre-wrap; word-break: break-word;
+}
+.log.open pre { height: 34vh; padding-bottom: 12px; }
+.log.open .chev { transform: rotate(180deg); }
+.log pre .ts { color: var(--ink-3); }
+.log pre .ok { color: var(--ok); }
+.log pre .bad { color: var(--bad); }
+.log pre .cmd { color: var(--info); }
+
+/* dialog */
+dialog {
+  border: 1px solid var(--line); border-radius: 14px; padding: 0; background: var(--panel); color: var(--ink);
+  width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+dialog::backdrop { background: rgba(20,15,10,.45); backdrop-filter: blur(2px); }
+.dlg-h { padding: 18px 20px 4px; display: flex; align-items: center; }
+.dlg-h h3 { margin: 0; font-size: 16px; flex: 1; }
+.dlg-b { padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+label.field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+label.field input { height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: var(--panel-2); outline: none; }
+label.field input:focus { border-color: var(--accent); }
+.drop {
+  border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 16px; text-align: center; color: var(--ink-2);
+  background: var(--panel-2); transition: border-color .15s, background .15s;
+}
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop .big { font-size: 15px; color: var(--ink); font-weight: 600; margin-bottom: 4px; }
+.drop .hint { font-size: 12px; color: var(--ink-3); margin-top: 10px; }
+.drop .pick { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.files-summary { font-size: 13px; color: var(--ink-2); }
+.dlg-f { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+.dlg-f .progress { flex: 1; }
+
+/* toast */
+.toasts { position: fixed; right: 20px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: 360px; animation: up .2s ease; }
+.toast.bad { background: var(--bad); color: #fff; }
+@keyframes up { from { transform: translateY(8px); opacity: 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img class="mark" src="/icon.svg" alt="">
+    <div><h1>mokuro</h1><small id="mangaDir">manga OCR</small></div>
+  </div>
+  <div class="gpu" id="gpu" title=""><span class="dot"></span><span class="name">Checking GPU…</span></div>
+  <label class="toggle" title="Automatically queue new volumes found in the manga folder">
+    <input type="checkbox" id="watch"><span class="switch"></span>Auto-process
+  </label>
+  <button class="btn" id="scanBtn" title="Look for new volumes now and queue them">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Scan now
+  </button>
+  <button class="btn primary" id="uploadBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Upload
+  </button>
+</header>
+
+<main>
+  <aside>
+    <section class="card" id="nowCard">
+      <div class="card-h"><h2>Now processing</h2></div>
+      <div class="card-b" id="now"><div class="empty">Idle</div></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Queue <span id="qCount"></span></h2>
+        <button class="btn sm ghost danger hidden" id="clearQ">Clear</button>
+      </div>
+      <div class="card-b"><ul class="list" id="queue"></ul></div>
+    </section>
+
+    <section class="card" id="recentCard">
+      <div class="card-h"><h2>Recent</h2></div>
+      <div class="card-b"><ul class="list" id="history"></ul></div>
+    </section>
+  </aside>
+
+  <section class="card" id="libCard">
+    <div class="card-h"><h2>Library</h2>
+      <button class="btn sm hidden" id="queueAll">Process all pending</button>
+    </div>
+    <div class="lib-tools">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" placeholder="Filter series or volumes" autocomplete="off">
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div id="library"><div class="empty" style="padding:0 14px 14px">Loading…</div></div>
+  </section>
+</main>
+
+<div class="log" id="log">
+  <div class="log-h" id="logHead">
+    <strong>Log</strong><span class="last" id="logLast"></span>
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+  </div>
+  <pre id="logBody"></pre>
+</div>
+
+<dialog id="upDlg">
+  <div class="dlg-h"><h3>Upload manga</h3><button class="btn sm ghost" id="upClose">Close</button></div>
+  <div class="dlg-b">
+    <label class="field">Series folder
+      <input id="upSeries" list="seriesList" placeholder="e.g. Yotsuba&!" autocomplete="off">
+      <datalist id="seriesList"></datalist>
+    </label>
+    <div class="drop" id="drop">
+      <div class="big">Drop .cbz files or volume folders here</div>
+      <div>Each folder of images becomes one volume.</div>
+      <div class="pick">
+        <button class="btn sm" id="pickFiles">Choose .cbz / .zip</button>
+        <button class="btn sm" id="pickFolder">Choose folder</button>
+      </div>
+      <div class="hint">New volumes are queued automatically once the upload finishes.</div>
+      <input type="file" id="fileIn" multiple accept=".cbz,.zip" class="hidden">
+      <input type="file" id="dirIn" webkitdirectory multiple class="hidden">
+    </div>
+    <div class="files-summary" id="upSummary"></div>
+    <div class="dlg-f">
+      <div class="progress hidden" id="upProg"><i style="width:0"></i></div>
+      <button class="btn primary" id="upGo" disabled>Upload</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("mokuro." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("mokuro." + k, JSON.stringify(v)); } catch {} },
+};
+
+let status = null, lib = null, logSeq = 0;
+let filter = store.get("filter", "all"), query = "";
+const closed = new Set(store.get("closed", []));
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    let msg = r.statusText;
+    try { msg = (await r.json()).detail || msg; } catch {}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+function toast(msg, bad) {
+  const t = document.createElement("div");
+  t.className = "toast" + (bad ? " bad" : "");
+  t.textContent = msg;
+  $("#toasts").append(t);
+  setTimeout(() => t.remove(), 3500);
+}
+async function act(fn, okMsg) {
+  try { await fn(); if (okMsg) toast(okMsg); }
+  catch (e) { toast(e.message, true); }
+  poll(); loadLibrary(true);
+}
+
+const split = p => { const i = p.lastIndexOf("/"); return i < 0 ? ["", p] : [p.slice(0, i), p.slice(i + 1)]; };
+function dur(s) {
+  if (s == null) return "";
+  s = Math.round(s);
+  if (s < 60) return s + "s";
+  const m = Math.floor(s / 60), r = s % 60;
+  if (m < 60) return `${m}m ${String(r).padStart(2, "0")}s`;
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+}
+function ago(t) {
+  const s = Date.now() / 1000 - t;
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  return new Date(t * 1000).toLocaleDateString();
+}
+const LABEL = { done: "Done", pending: "Pending", settling: "Copying", queued: "Queued", processing: "Processing", failed: "Failed", cancelled: "Cancelled" };
+const badge = s => `<span class="badge b-${s}">${LABEL[s] || s}</span>`;
+
+/* ---------------- status polling ---------------- */
+async function poll() {
+  try {
+    const s = await api("/api/status?since=" + logSeq);
+    const prevDone = status && status.history[0] && status.history[0].finished;
+    const prevKey = status && JSON.stringify([status.current && status.current.path, status.queue.map(q => q.path)]);
+    status = s;
+    renderHeader(); renderNow(); renderQueue(); renderHistory(); appendLogs(s.logs); logSeq = s.log_seq;
+    const key = JSON.stringify([s.current && s.current.path, s.queue.map(q => q.path)]);
+    if ((s.history[0] && s.history[0].finished) !== prevDone || key !== prevKey) {
+      if (prevKey !== null) loadLibrary(true); else renderLibrary();
+    }
+  } catch (e) { /* server restarting */ }
+}
+
+function renderHeader() {
+  const g = status.gpu, el = $("#gpu");
+  $("#mangaDir").textContent = status.settings.manga_dir;
+  $("#watch").checked = status.watch;
+  const cpu = !g.available || g.force_cpu || g.cuda === false;
+  el.classList.toggle("cpu", cpu);
+  if (!g.available) {
+    el.innerHTML = `<span class="dot"></span><span class="name">CPU mode</span><span class="metric">no NVIDIA GPU visible</span>`;
+    el.title = "Check --runtime=nvidia and NVIDIA_VISIBLE_DEVICES";
+    return;
+  }
+  const memPct = g.mem_total ? (g.mem_used / g.mem_total) * 100 : 0;
+  const note = g.force_cpu ? `<span class="metric">FORCE_CPU on</span>` : g.cuda === false ? `<span class="metric">CUDA unavailable</span>` : "";
+  el.innerHTML = `<span class="dot"></span><span class="name">${esc(g.name.replace(/^NVIDIA\s+/, ""))}</span>
+    <span class="metric" title="GPU utilisation">${Math.round(g.util ?? 0)}%<span class="meter"><i style="width:${g.util ?? 0}%"></i></span></span>
+    <span class="metric" title="VRAM">${(g.mem_used / 1024).toFixed(1)}/${(g.mem_total / 1024).toFixed(0)} GB<span class="meter"><i style="width:${memPct}%"></i></span></span>
+    ${g.temp != null ? `<span class="metric" title="Temperature">${Math.round(g.temp)}°C</span>` : ""}${note}`;
+  el.title = g.cuda === false ? "nvidia-smi sees the card, but PyTorch can't use CUDA" : "";
+}
+
+function renderNow() {
+  const c = status.current, box = $("#now");
+  if (!c) {
+    const q = status.queue.length;
+    box.innerHTML = `<div class="empty">${q ? "Starting next volume…" : status.watch ? "Idle — watching for new volumes" : "Idle — auto-processing is off"}</div>`;
+    return;
+  }
+  const [series, name] = split(c.path);
+  const pct = c.total ? (c.done / c.total) * 100 : 0;
+  const elapsed = Date.now() / 1000 - c.started;
+  box.innerHTML = `
+    <div class="now-title">${esc(name)}</div>
+    <div class="now-series">${esc(series || "top level")}</div>
+    <div class="progress ${c.total ? "" : "indet"}"><i style="width:${pct}%"></i></div>
+    <div class="now-meta">
+      <span>${c.total ? `Page ${c.done} / ${c.total}` : esc(c.stage || "Starting") + "…"}</span>
+      <span>${c.rate ? esc(c.rate) + " · " : ""}${c.eta ? esc(c.eta) + " left" : dur(elapsed)}</span>
+    </div>
+    <div class="now-actions"><button class="btn sm danger" id="cancelBtn">Cancel</button></div>`;
+  $("#cancelBtn").onclick = () => act(() => api("/api/cancel", {}), "Cancelling…");
+}
+
+function renderQueue() {
+  const q = status.queue, ul = $("#queue");
+  $("#qCount").textContent = q.length ? `· ${q.length}` : "";
+  $("#clearQ").classList.toggle("hidden", !q.length);
+  if (!q.length) { ul.innerHTML = `<li class="empty">Nothing waiting</li>`; return; }
+  ul.innerHTML = q.slice(0, 50).map((it, i) => {
+    const [series, name] = split(it.path);
+    return `<li><span class="num">${i + 1}</span><div class="grow"><div class="t">${esc(name)}${it.force ? ' <span class="kind">RE-RUN</span>' : ""}</div><div class="sub">${esc(series || "top level")}</div></div>
+      <button class="btn sm ghost remove" data-path="${esc(it.path)}" title="Remove from queue">✕</button></li>`;
+  }).join("") + (q.length > 50 ? `<li class="empty">+ ${q.length - 50} more</li>` : "");
+  ul.querySelectorAll(".remove").forEach(b => b.onclick = () => act(() => api("/api/queue/remove", { path: b.dataset.path })));
+}
+
+function renderHistory() {
+  const h = status.history, ul = $("#history");
+  if (!h.length) { ul.innerHTML = `<li class="empty">No jobs yet</li>`; return; }
+  ul.innerHTML = h.slice(0, 8).map(it => {
+    const [series, name] = split(it.path);
+    return `<li><div class="grow"><div class="t">${esc(name)}</div><div class="sub">${esc(series || "top level")} · ${dur(it.duration)} · ${ago(it.finished)}</div></div>${badge(it.result)}</li>`;
+  }).join("");
+}
+
+/* ---------------- library ---------------- */
+async function loadLibrary(refresh) {
+  try { lib = await api("/api/library" + (refresh ? "?refresh=1" : "")); renderLibrary(); }
+  catch (e) { $("#library").innerHTML = `<div class="empty" style="padding:0 14px 14px">Could not load library: ${esc(e.message)}</div>`; }
+}
+
+function liveStatus(v) {
+  if (!status) return v.status;
+  if (status.current && status.current.path === v.path) return "processing";
+  if (status.queue.some(q => q.path === v.path)) return "queued";
+  // server snapshot is a few seconds old; if it's no longer queued/processing, a fresh library load will tell us the result
+  if (v.status === "processing" || v.status === "queued") return "pending";
+  return v.status;
+}
+
+function renderLibrary() {
+  if (!lib) return;
+  const counts = { all: 0, pending: 0, queued: 0, processing: 0, done: 0, failed: 0 };
+  lib.series.forEach(s => s.volumes.forEach(v => { v._s = liveStatus(v); counts.all++; const k = v._s === "settling" ? "pending" : v._s; counts[k] = (counts[k] || 0) + 1; }));
+
+  const chips = [["all", "All"], ["pending", "Pending"], ["queued", "Queued"], ["done", "Done"], ["failed", "Failed"]];
+  $("#chips").innerHTML = chips.map(([k, l]) => `<button class="chip ${filter === k ? "on" : ""}" data-f="${k}">${l} <b>${counts[k] + (k === "queued" ? counts.processing : 0)}</b></button>`).join("");
+  $("#chips").querySelectorAll(".chip").forEach(c => c.onclick = () => { filter = c.dataset.f; store.set("filter", filter); renderLibrary(); });
+  $("#queueAll").classList.toggle("hidden", !lib.series.some(s => s.volumes.some(v => v._s === "pending")));
+  $("#seriesList").innerHTML = lib.series.filter(s => s.path).map(s => `<option value="${esc(s.path)}">`).join("");
+
+  const q = query.toLowerCase();
+  const match = v => {
+    const f = filter === "all" || v._s === filter || (filter === "pending" && v._s === "settling") || (filter === "queued" && v._s === "processing");
+    return f;
+  };
+  let html = "";
+  for (const s of lib.series) {
+    const seriesHit = !q || s.name.toLowerCase().includes(q);
+    const vols = s.volumes.filter(v => match(v) && (seriesHit || v.name.toLowerCase().includes(q)));
+    if (!vols.length) continue;
+    const done = s.volumes.filter(v => v._s === "done").length;
+    const pending = s.volumes.filter(v => v._s === "pending").length;
+    const isClosed = closed.has(s.path) && !q;
+    html += `<div class="series ${isClosed ? "closed" : ""}" data-s="${esc(s.path)}">
+      <div class="series-h">
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+        <span class="series-name" title="${esc(s.name)}">${esc(s.name)}</span>
+        <span class="series-stat">${done}/${s.volumes.length}<span class="mini"><i style="width:${(done / s.volumes.length) * 100}%"></i></span></span>
+        ${pending ? `<button class="btn sm" data-qs="${esc(s.path)}">Process ${pending}</button>` : ""}
+      </div>
+      <div class="vols">${vols.map(volRow).join("")}</div>
+    </div>`;
+  }
+  if (!html) {
+    html = lib.series.length
+      ? `<div class="empty" style="padding:4px 14px 16px">No volumes match.</div>`
+      : `<div class="empty" style="padding:4px 14px 16px">No volumes found in <code>${esc(status ? status.settings.manga_dir : "/manga")}</code>. Add folders of images or .cbz files, or use Upload.</div>`;
+  }
+  const box = $("#library");
+  box.innerHTML = html;
+
+  box.querySelectorAll(".series-h").forEach(h => h.onclick = e => {
+    if (e.target.closest("button")) return;
+    const el = h.parentElement, p = el.dataset.s;
+    el.classList.toggle("closed");
+    el.classList.contains("closed") ? closed.add(p) : closed.delete(p);
+    store.set("closed", [...closed]);
+  });
+  box.querySelectorAll("[data-qs]").forEach(b => b.onclick = () => act(async () => {
+    const r = await api("/api/queue/pending", { series: b.dataset.qs }); toast(`Queued ${r.queued} volume(s)`);
+  }));
+  box.querySelectorAll("[data-a]").forEach(b => b.onclick = () => volAction(b.dataset.a, b.dataset.p));
+}
+
+function volRow(v) {
+  const s = v._s;
+  let btn = "";
+  if (s === "pending" || s === "settling") btn = `<button class="btn sm" data-a="run" data-p="${esc(v.path)}">Process</button>`;
+  else if (s === "failed") btn = `<button class="btn sm" data-a="run" data-p="${esc(v.path)}">Retry</button>`;
+  else if (s === "done") btn = `<button class="btn sm ghost" data-a="rerun" data-p="${esc(v.path)}" title="Run OCR again">Re-run</button>`;
+  else if (s === "queued") btn = `<button class="btn sm ghost" data-a="unqueue" data-p="${esc(v.path)}">Remove</button>`;
+  else if (s === "processing") btn = `<button class="btn sm ghost danger" data-a="cancel" data-p="${esc(v.path)}">Cancel</button>`;
+  return `<div class="vol">
+    <div class="vn">${v.kind === "archive" ? `<span class="kind">${esc(v.name.split(".").pop().toUpperCase())}</span>` : ""}<span title="${esc(v.name)}">${esc(v.name)}</span></div>
+    ${badge(s)}<div class="act">${btn}</div>
+    ${s === "failed" && v.error ? `<div class="err">${esc(v.error)}</div>` : ""}
+  </div>`;
+}
+
+function volAction(a, p) {
+  if (a === "run") return act(() => api("/api/queue", { path: p }), "Queued");
+  if (a === "rerun") {
+    if (!confirm("Run OCR on this volume again from scratch? The existing .mokuro file will be replaced.")) return;
+    return act(() => api("/api/queue", { path: p, force: true, no_cache: true, front: true }), "Queued for re-run");
+  }
+  if (a === "unqueue") return act(() => api("/api/queue/remove", { path: p }));
+  if (a === "cancel") return act(() => api("/api/cancel", {}), "Cancelling…");
+}
+
+/* ---------------- log ---------------- */
+let logLines = 0;
+function appendLogs(lines) {
+  if (!lines.length) return;
+  const pre = $("#logBody");
+  const atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
+  const frag = document.createDocumentFragment();
+  for (const l of lines) {
+    const d = new Date(l.t * 1000);
+    const ts = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const span = document.createElement("span");
+    const cls = /^✔/.test(l.msg) ? "ok" : /^✖|error|warning|traceback/i.test(l.msg) ? "bad" : /^\$ |^▶/.test(l.msg) ? "cmd" : "";
+    span.innerHTML = `<span class="ts">${ts}</span>  <span class="${cls}">${esc(l.msg)}</span>\n`;
+    frag.append(span);
+    logLines++;
+  }
+  pre.append(frag);
+  while (logLines > 1500) { pre.firstChild.remove(); logLines--; }
+  if (atBottom) pre.scrollTop = pre.scrollHeight;
+  $("#logLast").textContent = lines[lines.length - 1].msg;
+}
+$("#logHead").onclick = () => {
+  const el = $("#log"); el.classList.toggle("open"); store.set("logOpen", el.classList.contains("open"));
+  const pre = $("#logBody"); pre.scrollTop = pre.scrollHeight;
+};
+if (store.get("logOpen", false)) $("#log").classList.add("open");
+
+/* ---------------- header actions ---------------- */
+$("#watch").onchange = e => act(() => api("/api/watch", { enabled: e.target.checked }));
+$("#scanBtn").onclick = () => act(() => api("/api/scan", {}), "Scanning…");
+$("#queueAll").onclick = () => act(async () => { const r = await api("/api/queue/pending", {}); toast(`Queued ${r.queued} volume(s)`); });
+$("#clearQ").onclick = () => { if (confirm("Remove everything from the queue?")) act(() => api("/api/queue/clear", {})); };
+let searchT;
+$("#search").oninput = e => { clearTimeout(searchT); searchT = setTimeout(() => { query = e.target.value.trim(); renderLibrary(); }, 120); };
+
+/* ---------------- upload ---------------- */
+const dlg = $("#upDlg");
+let upFiles = []; // [{file, path}]
+$("#uploadBtn").onclick = () => { upFiles = []; renderUp(); $("#upProg").classList.add("hidden"); dlg.showModal(); };
+$("#upClose").onclick = () => dlg.close();
+$("#pickFiles").onclick = () => $("#fileIn").click();
+$("#pickFolder").onclick = () => $("#dirIn").click();
+$("#fileIn").onchange = e => { addFiles([...e.target.files].map(f => ({ file: f, path: f.name }))); e.target.value = ""; };
+$("#dirIn").onchange = e => { addFiles([...e.target.files].map(f => ({ file: f, path: f.webkitRelativePath || f.name }))); e.target.value = ""; };
+
+const okExt = /\.(cbz|zip|jpe?g|png|webp|bmp|gif|avif)$/i;
+function addFiles(list) { upFiles.push(...list.filter(x => okExt.test(x.path) && !/(^|\/)\./.test(x.path))); renderUp(); }
+function renderUp() {
+  const archives = upFiles.filter(x => /\.(cbz|zip)$/i.test(x.path)).length;
+  const imgs = upFiles.length - archives;
+  const folders = new Set(upFiles.filter(x => !/\.(cbz|zip)$/i.test(x.path)).map(x => x.path.split("/").slice(0, -1).join("/"))).size;
+  const bytes = upFiles.reduce((a, x) => a + x.file.size, 0);
+  $("#upSummary").textContent = upFiles.length
+    ? [archives && `${archives} archive(s)`, imgs && `${imgs} images in ${folders} folder(s)`].filter(Boolean).join(", ") + ` · ${(bytes / 1048576).toFixed(1)} MB`
+    : "";
+  $("#upGo").disabled = !upFiles.length;
+}
+
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", async e => {
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (!items.length) { addFiles([...e.dataTransfer.files].map(f => ({ file: f, path: f.name }))); return; }
+  const out = [];
+  async function walk(entry) {
+    if (entry.isFile) {
+      const file = await new Promise((res, rej) => entry.file(res, rej));
+      out.push({ file, path: entry.fullPath.replace(/^\//, "") });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      let batch;
+      do {
+        batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+        for (const child of batch) await walk(child);
+      } while (batch.length);
+    }
+  }
+  for (const it of items) await walk(it);
+  addFiles(out);
+});
+
+$("#upGo").onclick = () => {
+  const fd = new FormData();
+  fd.append("series", $("#upSeries").value.trim());
+  for (const x of upFiles) { fd.append("files", x.file, x.file.name); fd.append("paths", x.path); }
+  const xhr = new XMLHttpRequest();
+  const prog = $("#upProg"); prog.classList.remove("hidden"); prog.firstElementChild.style.width = "0";
+  $("#upGo").disabled = true;
+  xhr.upload.onprogress = e => { if (e.lengthComputable) prog.firstElementChild.style.width = (e.loaded / e.total) * 100 + "%"; };
+  xhr.onload = () => {
+    $("#upGo").disabled = false;
+    if (xhr.status >= 200 && xhr.status < 300) {
+      const r = JSON.parse(xhr.responseText);
+      toast(`Uploaded ${r.saved} file(s), queued ${r.queued} volume(s)`);
+      dlg.close(); upFiles = []; poll(); loadLibrary(true);
+    } else {
+      let m = xhr.statusText; try { m = JSON.parse(xhr.responseText).detail || m; } catch {}
+      toast("Upload failed: " + m, true);
+    }
+  };
+  xhr.onerror = () => { $("#upGo").disabled = false; toast("Upload failed: network error", true); };
+  xhr.open("POST", "/api/upload");
+  xhr.send(fd);
+};
+
+/* ---------------- boot ---------------- */
+poll().then(() => loadLibrary(true));
+setInterval(poll, 1500);
+setInterval(() => loadLibrary(false), 15000);
+</script>
+</body>
+</html>

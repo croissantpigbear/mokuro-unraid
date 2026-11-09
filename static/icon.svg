@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d4502f"/>
+      <stop offset="1" stop-color="#b63a22"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- scan frame corners -->
+  <g fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
+    <path d="M78 150V78h72"/>
+    <path d="M362 78h72v72"/>
+    <path d="M434 362v72h-72"/>
+    <path d="M150 434H78v-72"/>
+  </g>
+  <!-- speech bubble -->
+  <path fill="#fff" d="M256 118c-78 0-140 54-140 124 0 44 25 83 63 105l-17 52 58-36c11 2 23 3 36 3 78 0 140-54 140-124S334 118 256 118z"/>
+  <!-- vertical text, middle line selected -->
+  <rect x="235" y="160" width="42" height="150" rx="10" fill="#f6c9bc"/>
+  <rect x="300" y="168" width="24" height="134" rx="12" fill="#1d1b18"/>
+  <rect x="244" y="168" width="24" height="112" rx="12" fill="#c8462c"/>
+  <rect x="188" y="168" width="24" height="78" rx="12" fill="#1d1b18"/>
+</svg>

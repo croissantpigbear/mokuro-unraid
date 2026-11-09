@@ -1,0 +1,23 @@
+services:
+  mokuro:
+    image: ghcr.io/croissantpigbear/mokuro-unraid:latest
+    # build: .                             # uncomment to build locally instead
+    container_name: mokuro
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "8090:8090"                         # web UI
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all          # or your GPU UUID from the Nvidia Driver plugin
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PUID=99                             # Unraid nobody
+      - PGID=100                            # Unraid users
+      - UMASK=000
+      - WATCH=true                          # start with auto-processing on (toggle in the UI)
+      - SCAN_INTERVAL=300                   # seconds between scans
+      - SETTLE_SECONDS=120                  # ignore volumes modified in the last N seconds
+      - EXTRA_ARGS=--disable_html=True      # .mokuro files only (for reader.mokuro.app)
+      # - WEBUI_PASSWORD=changeme           # optional basic-auth password
+    volumes:
+      - /mnt/user/data/manga:/manga
+      - /mnt/user/appdata/mokuro:/config    # model cache, UI state, upload temp

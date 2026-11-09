@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>mokuro</Name>
+  <Repository>ghcr.io/croissantpigbear/mokuro-unraid:latest</Repository>
+  <Registry>https://github.com/croissantpigbear/mokuro-unraid/pkgs/container/mokuro-unraid</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/croissantpigbear/mokuro-unraid/issues</Support>
+  <Project>https://github.com/croissantpigbear/mokuro-unraid</Project>
+  <ReadMe>https://github.com/croissantpigbear/mokuro-unraid#readme</ReadMe>
+  <Overview>Runs mokuro (Japanese manga OCR) on an NVIDIA GPU. Has a web UI to browse your library, watch progress and upload volumes, and creates a .mokuro file for every volume, for use with reader.mokuro.app or a self-hosted mokuro-reader. Requires the Nvidia Driver plugin.</Overview>
+  <Category>Tools: MediaServer:Books</Category>
+  <WebUI>http://[IP]:[PORT:8090]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/croissantpigbear/mokuro-unraid/main/my-mokuro.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/croissantpigbear/mokuro-unraid/main/icon.png</Icon>
+  <ExtraParams>--runtime=nvidia</ExtraParams>
+  <Config Name="Web UI port" Target="8090" Default="8090" Mode="tcp" Description="" Type="Port" Display="always" Required="true">8090</Config>
+  <Config Name="Manga" Target="/manga" Default="/mnt/user/data/manga" Mode="rw" Description="Folder with your manga (Series/Volume folders or .cbz files)" Type="Path" Display="always" Required="true">/mnt/user/data/manga</Config>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/mokuro" Mode="rw" Description="Model cache, UI state and upload temp files" Type="Path" Display="advanced" Required="true">/mnt/user/appdata/mokuro</Config>
+  <Config Name="NVIDIA_VISIBLE_DEVICES" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="" Description="'all' or the GPU UUID shown in the Nvidia Driver plugin" Type="Variable" Display="always" Required="true">all</Config>
+  <Config Name="NVIDIA_DRIVER_CAPABILITIES" Target="NVIDIA_DRIVER_CAPABILITIES" Default="compute,utility" Mode="" Description="" Type="Variable" Display="advanced" Required="true">compute,utility</Config>
+  <Config Name="Auto-process on start" Target="WATCH" Default="true" Mode="" Description="Initial state of the Auto-process switch (the UI remembers your choice afterwards)" Type="Variable" Display="always" Required="false">true</Config>
+  <Config Name="Scan interval (s)" Target="SCAN_INTERVAL" Default="300" Mode="" Description="" Type="Variable" Display="always" Required="false">300</Config>
+  <Config Name="Web UI password" Target="WEBUI_PASSWORD" Default="" Mode="" Description="Optional. Any username + this password" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Settle time (s)" Target="SETTLE_SECONDS" Default="120" Mode="" Description="Skip folders changed in the last N seconds (still copying)" Type="Variable" Display="advanced" Required="false">120</Config>
+  <Config Name="Extra mokuro args" Target="EXTRA_ARGS" Default="--disable_html=True" Mode="" Description="Remove to also generate legacy HTML files" Type="Variable" Display="advanced" Required="false">--disable_html=True</Config>
+  <Config Name="Force CPU" Target="FORCE_CPU" Default="false" Mode="" Description="" Type="Variable" Display="advanced" Required="false">false</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="advanced" Required="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="" Type="Variable" Display="advanced" Required="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="000" Mode="" Description="" Type="Variable" Display="advanced" Required="false">000</Config>
+</Container>
