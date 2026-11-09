@@ -20,8 +20,20 @@ EOF
 mokuro --disable_confirmation=True --force_cpu=True --legacy_html=False "$work/vol1"
 
 if [ -s "$work/vol1.mokuro" ]; then
-  echo "SMOKE TEST PASSED: $(wc -c < "$work/vol1.mokuro") byte .mokuro file written"
+  echo "SMOKE TEST: $(wc -c < "$work/vol1.mokuro") byte .mokuro file written"
 else
   echo "SMOKE TEST FAILED: no .mokuro file was produced" >&2
   exit 1
 fi
+
+# Second run with HTML on: what the web UI does to add HTML to an already-processed volume
+mokuro --disable_confirmation=True --force_cpu=True --legacy_html=True "$work/vol1"
+
+if [ -s "$work/vol1.html" ] && grep -q "vol1/001.png" "$work/vol1.html"; then
+  echo "SMOKE TEST: $(wc -c < "$work/vol1.html") byte .html file written"
+else
+  echo "SMOKE TEST FAILED: no usable .html file was produced" >&2
+  exit 1
+fi
+
+echo "SMOKE TEST PASSED"

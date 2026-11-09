@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     SCAN_INTERVAL=300 \
     SETTLE_SECONDS=120 \
     FORCE_CPU=false \
+    OUTPUT_HTML=false \
     EXTRA_ARGS="" \
     IMAGE_VERSION=${GIT_SHA}
 
@@ -34,7 +35,8 @@ RUN pip install "mokuro==${MOKURO_VERSION}" "transformers>=4.45,<5" \
  # fail the build if transformers can't use this torch (the error users saw with transformers 5)
  && python -c "import transformers; from transformers.utils import is_torch_available; assert is_torch_available(), 'transformers cannot use torch'; print('transformers', transformers.__version__)" \
  # fail the build if mokuro rejects any option the web UI passes to it
- && mokuro --version --disable_confirmation=True --force_cpu=True --no_cache=True --legacy_html=False
+ && mokuro --version --disable_confirmation=True --force_cpu=True --no_cache=True --legacy_html=False \
+ && mokuro --version --legacy_html=True
 
 COPY app.py /app/app.py
 COPY static /app/static

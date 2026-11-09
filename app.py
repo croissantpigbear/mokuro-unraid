@@ -31,17 +31,13 @@ WATCH = os.environ.get("WATCH", "true").lower() == "true"
 SCAN_INTERVAL = int(os.environ.get("SCAN_INTERVAL", "300"))
 SETTLE_SECONDS = int(os.environ.get("SETTLE_SECONDS", "120"))
 FORCE_CPU = os.environ.get("FORCE_CPU", "false").lower() == "true"
+OUTPUT_HTML = os.environ.get("OUTPUT_HTML", "false").lower() == "true"
+
+
 def _normalise_args(args):
-    """mokuro's README mentions --disable_html, but the released 0.2.x CLI calls it --legacy_html."""
-    out = []
-    for a in args:
-        name, _, val = a.partition("=")
-        if name == "--disable_html":
-            if val.lower() in ("", "true", "1"):
-                out.append("--legacy_html=False")
-            continue
-        out.append(a)
-    return out
+    """HTML output is controlled by the UI switch, so drop any html flags from EXTRA_ARGS.
+    (mokuro's README calls it --disable_html; the released 0.2.x CLI calls it --legacy_html.)"""
+    return [a for a in args if a.partition("=")[0] not in ("--disable_html", "--legacy_html", "--legacy-html")]
 
 
 EXTRA_ARGS = _normalise_args(os.environ.get("EXTRA_ARGS", "").split())
@@ -69,6 +65,7 @@ class State:
         self.logs = deque(maxlen=2000)
         self.log_seq = 0
         self.watch = WATCH
+        self.html = OUTPUT_HTML
         self.last_scan = None
         self.proc = None
         self.cancel_requested = False
@@ -88,6 +85,8 @@ class State:
         self.queue = data.get("queue", [])
         if "watch" in data:
             self.watch = data["watch"]
+        if "html" in data:
+            self.html = data["html"]
 
     def save(self):
         with self.lock:
@@ -96,6 +95,7 @@ class State:
                 "history": list(self.history),
                 "queue": self.queue,
                 "watch": self.watch,
+                "html": self.html,
             }
         try:
             tmp = STATE_FILE.with_suffix(".tmp")
@@ -152,6 +152,12 @@ def target_for(vol: Path) -> Path:
     return vol.parent / f"{vol.name}.mokuro"
 
 
+def html_for(vol: Path) -> Path:
+    # mokuro writes <title dir>/<volume dir name>.html; an archive is extracted to <stem>/ first
+    name = vol.stem if vol.is_file() else vol.name
+    return vol.parent / f"{name}.html"
+
+
 def newest_mtime(p: Path) -> float:
     try:
         t = p.stat().st_mtime
@@ -170,8 +176,10 @@ def natural_key(s: str):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
 
 
-def build_cmd(args):
-    cmd = ["mokuro", "--disable_confirmation=True"]
+def build_cmd(args, html=None):
+    if html is None:
+        html = S.html
+    cmd = ["mokuro", "--disable_confirmation=True", f"--legacy_html={html}"]
     if FORCE_CPU:
         cmd.append("--force_cpu=True")
     return cmd + EXTRA_ARGS + [str(a) for a in args]
@@ -202,20 +210,25 @@ def library(refresh=False):
         queued = {q["path"] for q in S.queue}
         current = S.current["path"] if S.current else None
         failures = dict(S.failures)
+        want_html = S.html
 
     now = time.time()
     groups = {}
     for vol in find_volumes():
         r = rel(vol)
         target = target_for(vol)
+        html = html_for(vol)
+        has_html = html.exists()
         if r == current:
             status = "processing"
         elif r in queued:
             status = "queued"
-        elif target.exists():
+        elif target.exists() and (has_html or not want_html):
             status = "done"
         elif r in failures:
             status = "failed"
+        elif target.exists():
+            status = "needs_html"   # OCR done, HTML wanted but missing: quick, no OCR needed
         elif now - newest_mtime(vol) < SETTLE_SECONDS:
             status = "settling"
         else:
@@ -228,10 +241,11 @@ def library(refresh=False):
             "kind": "archive" if vol.is_file() else "folder",
             "status": status,
             "error": failures.get(r, {}).get("error") if status == "failed" else None,
+            "html": rel(html) if has_html else None,
         })
 
     series_list = []
-    counts = {"all": 0, "pending": 0, "done": 0, "failed": 0, "queued": 0, "processing": 0, "settling": 0}
+    counts = {"all": 0, "pending": 0, "needs_html": 0, "done": 0, "failed": 0, "queued": 0, "processing": 0, "settling": 0}
     for s_rel in sorted(groups, key=natural_key):
         vols = sorted(groups[s_rel], key=lambda v: natural_key(v["name"]))
         for v in vols:
@@ -269,7 +283,7 @@ def queue_pending(series: Optional[str] = None) -> int:
         if series is not None and s["path"] != series:
             continue
         for v in s["volumes"]:
-            if v["status"] == "pending" and enqueue(v["path"]):
+            if v["status"] in ("pending", "needs_html") and enqueue(v["path"]):
                 n += 1
     return n
 
@@ -366,12 +380,16 @@ def run_job(item):
     args = []
     if item.get("no_cache"):
         args.append("--no_cache=True")
-    cmd = build_cmd(args + [vol])
+    with S.lock:
+        want_html = S.html
+    html_only = target.exists()   # OCR already done: mokuro reuses it and just writes the HTML
+    html_path = html_for(vol)
+    cmd = build_cmd(args + [vol], html=want_html)
 
     started = time.time()
     with S.lock:
-        S.current = {"path": r, "started": started, "done": 0, "total": 0,
-                     "eta": None, "rate": None, "stage": "Loading models"}
+        S.current = {"path": r, "started": started, "done": 0, "total": 0, "eta": None, "rate": None,
+                     "stage": "Writing HTML" if html_only else "Loading models"}
         S.cancel_requested = False
     S.invalidate()
     S.log(f"▶ {r}")
@@ -401,7 +419,8 @@ def run_job(item):
             done, total, eta, rate = prog
             with S.lock:
                 if S.current:
-                    S.current.update(done=done, total=total, eta=eta, rate=rate, stage="OCR")
+                    S.current.update(done=done, total=total, eta=eta, rate=rate,
+                                     stage="Writing HTML" if html_only else "OCR")
             return
         tail.append(line)
         S.log(line)
@@ -424,7 +443,7 @@ def run_job(item):
         cancelled = S.cancel_requested
         S.proc = None
         S.current = None
-        ok = rc == 0 and target.exists() and not cancelled
+        ok = rc == 0 and target.exists() and (html_path.exists() or not want_html) and not cancelled
         if cancelled:
             result = "cancelled"
         elif ok:
@@ -433,6 +452,8 @@ def run_job(item):
         else:
             result = "failed"
             err = next((l for l in reversed(tail) if "error" in l.lower()), None) or (tail[-1] if tail else f"exit code {rc}")
+            if target.exists() and want_html and not html_path.exists() and "error" not in err.lower():
+                err = "OCR finished but no HTML file was written. " + err
             S.failures[r] = {"error": err[-400:], "time": time.time(), "image": IMAGE_VERSION}
         S.history.appendleft({"path": r, "result": result, "duration": duration, "finished": time.time()})
     S.invalidate()
@@ -519,6 +540,10 @@ class WatchBody(BaseModel):
     enabled: bool
 
 
+class HtmlBody(BaseModel):
+    enabled: bool
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
@@ -543,6 +568,7 @@ def status(since: int = 0):
             "queue": list(S.queue),
             "history": list(S.history)[:25],
             "watch": S.watch,
+            "html": S.html,
             "last_scan": S.last_scan,
             "logs": logs[-500:],
             "log_seq": S.log_seq,
@@ -635,6 +661,33 @@ def set_watch(body: WatchBody):
     if body.enabled:
         S.scan_now.set()
     return {"watch": S.watch}
+
+
+@app.post("/api/html")
+def set_html(body: HtmlBody):
+    with S.lock:
+        S.html = body.enabled
+    S.invalidate()
+    S.save()
+    S.log(f"HTML output {'on' if body.enabled else 'off'}"
+          + (" — finished volumes without HTML will get it (no new OCR needed)" if body.enabled else ""))
+    if body.enabled and S.watch:
+        S.scan_now.set()
+    return {"html": S.html}
+
+
+@app.get("/files/{path:path}")
+def files(path: str):
+    """Serves the manga folder read-only so the generated HTML pages (and their images) open in the browser."""
+    try:
+        p = resolve_rel(path)
+    except ValueError:
+        raise HTTPException(404)
+    if any(part.startswith(".") for part in Path(path).parts) or not p.is_file():
+        raise HTTPException(404)
+    if p.suffix.lower() == ".html":
+        return FileResponse(p, media_type="text/html; charset=utf-8")
+    return FileResponse(p)
 
 
 def clean_parts(path: str):

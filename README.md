@@ -14,6 +14,7 @@ Open `http://<unraid-ip>:8090` (or click **WebUI** on the container icon).
 - **Now processing**: live page progress, speed and time left, with a Cancel button.
 - **Queue / Recent**: what's waiting and what just finished, with how long each took.
 - **Auto-process switch**: when on, new volumes are queued automatically every scan. **Scan now** checks immediately.
+- **HTML output switch**: also write mokuro's HTML reader page for each volume, opened with the **Read** button (or from the share in any browser). Turning it on adds HTML to volumes that are already done without redoing the OCR, so it takes seconds per volume.
 - **Upload**: drag in `.cbz`/`.zip` files or folders of images, choose (or type a new) series name, and they're saved to the share and queued.
 - **GPU chip**: card name, utilisation, VRAM and temperature, or a warning if it's running on the CPU.
 - **Log**: click the bar at the bottom for mokuro's output.
@@ -49,6 +50,9 @@ manga/
 ├─ Series A/
 │  ├─ vol1/          ← folder of images  → Series A/vol1.mokuro
 │  └─ vol2.cbz       ← archive           → Series A/vol2.mokuro (read straight from the archive)
+│
+│  with HTML output on, also:            → Series A/vol1.html, Series A/vol2.html
+│                                          (vol2.cbz is extracted to vol2/ first, as the HTML needs loose images)
 └─ Series B/ ...
 ```
 
@@ -61,9 +65,10 @@ Volumes that already have a `.mokuro` file count as done, so restarts are safe. 
 | `WEBUI_PORT` | `8090` | Port the UI listens on inside the container |
 | `WEBUI_PASSWORD` | *(empty)* | If set, the browser asks for a login: any username + this password |
 | `WATCH` | `true` | Initial state of the Auto-process switch (the UI remembers changes) |
+| `OUTPUT_HTML` | `false` | Initial state of the HTML output switch (the UI remembers changes) |
 | `SCAN_INTERVAL` | `300` | Seconds between automatic scans |
 | `SETTLE_SECONDS` | `120` | Wait this long after the last change before processing |
-| `EXTRA_ARGS` | `--legacy_html=False` | Passed to mokuro. Remove to also get legacy HTML output |
+| `EXTRA_ARGS` | *(empty)* | Extra options passed to mokuro (any HTML option here is ignored; use the switch) |
 | `FORCE_CPU` | `false` | Ignore the GPU |
 | `PUID` / `PGID` / `UMASK` | `99` / `100` / `000` | Ownership of created files (Unraid nobody:users) |
 
