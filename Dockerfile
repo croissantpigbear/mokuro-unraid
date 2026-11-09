@@ -1,6 +1,7 @@
 # mokuro with NVIDIA GPU support + web UI
-# Base image already ships PyTorch built against CUDA 12.4
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+# Base image ships PyTorch 2.6 built against CUDA 12.4 (needs NVIDIA driver >= 550).
+# torch >= 2.6 is required: transformers refuses to load the OCR model on older versions.
+FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
 
 ARG MOKURO_VERSION=0.2.5
 ARG GIT_SHA=dev
