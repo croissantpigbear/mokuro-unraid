@@ -50,6 +50,7 @@ PGID = os.environ.get("PGID")
 UMASK = os.environ.get("UMASK")
 WEBUI_PORT = int(os.environ.get("WEBUI_PORT", "8090"))
 WEBUI_PASSWORD = os.environ.get("WEBUI_PASSWORD", "")
+IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "dev")
 STATIC_DIR = Path(__file__).parent / "static"
 STATE_FILE = CONFIG_DIR / "webui-state.json"
 
@@ -385,7 +386,7 @@ def run_job(item):
         S.log(f"Could not start mokuro: {e}")
         with S.lock:
             S.current = None
-            S.failures[r] = {"error": str(e), "time": time.time()}
+            S.failures[r] = {"error": str(e), "time": time.time(), "image": IMAGE_VERSION}
         S.save()
         return
     with S.lock:
@@ -432,7 +433,7 @@ def run_job(item):
         else:
             result = "failed"
             err = next((l for l in reversed(tail) if "error" in l.lower()), None) or (tail[-1] if tail else f"exit code {rc}")
-            S.failures[r] = {"error": err[-400:], "time": time.time()}
+            S.failures[r] = {"error": err[-400:], "time": time.time(), "image": IMAGE_VERSION}
         S.history.appendleft({"path": r, "result": result, "duration": duration, "finished": time.time()})
     S.invalidate()
     S.save()
@@ -696,16 +697,16 @@ def main():
     tempfile.tempdir = str(tmp)  # big uploads spool here, not inside docker.img
 
     S.load()
-    # failures caused by bad command-line options aren't the volume's fault: let them be retried
-    stale = [p for p, f in S.failures.items() if "Could not consume arg" in (f.get("error") or "")]
+    # a failure under an older image may have been the image's fault: give it another go
+    stale = [p for p, f in S.failures.items() if f.get("image") != IMAGE_VERSION]
     for p in stale:
         S.failures.pop(p)
     if stale:
-        S.log(f"Cleared {len(stale)} failure(s) caused by an invalid mokuro option")
+        S.log(f"Image updated: {len(stale)} previously failed volume(s) will be retried")
         S.save()
     if not MANGA_DIR.is_dir():
         S.log(f"WARNING: {MANGA_DIR} does not exist, mount your manga share there")
-    S.log(f"Web UI on port {WEBUI_PORT}" + (" (password protected)" if WEBUI_PASSWORD else ""))
+    S.log(f"mokuro-unraid {IMAGE_VERSION[:7]}, web UI on port {WEBUI_PORT}" + (" (password protected)" if WEBUI_PASSWORD else ""))
 
     for target in (check_cuda, worker, scanner):
         threading.Thread(target=target, daemon=True).start()
