@@ -31,7 +31,20 @@ WATCH = os.environ.get("WATCH", "true").lower() == "true"
 SCAN_INTERVAL = int(os.environ.get("SCAN_INTERVAL", "300"))
 SETTLE_SECONDS = int(os.environ.get("SETTLE_SECONDS", "120"))
 FORCE_CPU = os.environ.get("FORCE_CPU", "false").lower() == "true"
-EXTRA_ARGS = os.environ.get("EXTRA_ARGS", "").split()
+def _normalise_args(args):
+    """mokuro's README mentions --disable_html, but the released 0.2.x CLI calls it --legacy_html."""
+    out = []
+    for a in args:
+        name, _, val = a.partition("=")
+        if name == "--disable_html":
+            if val.lower() in ("", "true", "1"):
+                out.append("--legacy_html=False")
+            continue
+        out.append(a)
+    return out
+
+
+EXTRA_ARGS = _normalise_args(os.environ.get("EXTRA_ARGS", "").split())
 PUID = os.environ.get("PUID")
 PGID = os.environ.get("PGID")
 UMASK = os.environ.get("UMASK")
@@ -683,6 +696,13 @@ def main():
     tempfile.tempdir = str(tmp)  # big uploads spool here, not inside docker.img
 
     S.load()
+    # failures caused by bad command-line options aren't the volume's fault: let them be retried
+    stale = [p for p, f in S.failures.items() if "Could not consume arg" in (f.get("error") or "")]
+    for p in stale:
+        S.failures.pop(p)
+    if stale:
+        S.log(f"Cleared {len(stale)} failure(s) caused by an invalid mokuro option")
+        S.save()
     if not MANGA_DIR.is_dir():
         S.log(f"WARNING: {MANGA_DIR} does not exist, mount your manga share there")
     S.log(f"Web UI on port {WEBUI_PORT}" + (" (password protected)" if WEBUI_PASSWORD else ""))

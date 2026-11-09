@@ -25,7 +25,9 @@ RUN apt-get update \
 # Install mokuro (torch is already present so pip keeps the CUDA build) and the web UI deps
 RUN pip install "mokuro==${MOKURO_VERSION}" "fastapi>=0.110" "uvicorn>=0.29" "python-multipart>=0.0.9" \
  # fail the build if pip swapped out the CUDA build of torch or anything is missing
- && python -c "import torch, mokuro, fastapi, uvicorn, multipart; assert torch.version.cuda, 'torch has no CUDA'; print('torch', torch.__version__, 'cuda', torch.version.cuda)"
+ && python -c "import torch, mokuro, fastapi, uvicorn, multipart; assert torch.version.cuda, 'torch has no CUDA'; print('torch', torch.__version__, 'cuda', torch.version.cuda)" \
+ # fail the build if mokuro rejects any option the web UI passes to it
+ && mokuro --version --disable_confirmation=True --force_cpu=True --no_cache=True --legacy_html=False
 
 COPY app.py /app/app.py
 COPY static /app/static

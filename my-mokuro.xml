@@ -24,7 +24,7 @@
   <Config Name="Scan interval (s)" Target="SCAN_INTERVAL" Default="300" Mode="" Description="" Type="Variable" Display="always" Required="false">300</Config>
   <Config Name="Web UI password" Target="WEBUI_PASSWORD" Default="" Mode="" Description="Optional. Any username + this password" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="Settle time (s)" Target="SETTLE_SECONDS" Default="120" Mode="" Description="Skip folders changed in the last N seconds (still copying)" Type="Variable" Display="advanced" Required="false">120</Config>
-  <Config Name="Extra mokuro args" Target="EXTRA_ARGS" Default="--disable_html=True" Mode="" Description="Remove to also generate legacy HTML files" Type="Variable" Display="advanced" Required="false">--disable_html=True</Config>
+  <Config Name="Extra mokuro args" Target="EXTRA_ARGS" Default="--legacy_html=False" Mode="" Description="Remove to also generate legacy HTML files" Type="Variable" Display="advanced" Required="false">--legacy_html=False</Config>
   <Config Name="Force CPU" Target="FORCE_CPU" Default="false" Mode="" Description="" Type="Variable" Display="advanced" Required="false">false</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="advanced" Required="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="" Type="Variable" Display="advanced" Required="false">100</Config>

@@ -48,7 +48,7 @@ Every push to `main` builds and publishes a new `latest` image via GitHub Action
 manga/
 ├─ Series A/
 │  ├─ vol1/          ← folder of images  → Series A/vol1.mokuro
-│  └─ vol2.cbz       ← archive           → Series A/vol2.mokuro (+ extracted vol2/)
+│  └─ vol2.cbz       ← archive           → Series A/vol2.mokuro (read straight from the archive)
 └─ Series B/ ...
 ```
 
@@ -63,7 +63,7 @@ Volumes that already have a `.mokuro` file count as done, so restarts are safe. 
 | `WATCH` | `true` | Initial state of the Auto-process switch (the UI remembers changes) |
 | `SCAN_INTERVAL` | `300` | Seconds between automatic scans |
 | `SETTLE_SECONDS` | `120` | Wait this long after the last change before processing |
-| `EXTRA_ARGS` | `--disable_html=True` | Passed to mokuro. Remove to also get legacy HTML output |
+| `EXTRA_ARGS` | `--legacy_html=False` | Passed to mokuro. Remove to also get legacy HTML output |
 | `FORCE_CPU` | `false` | Ignore the GPU |
 | `PUID` / `PGID` / `UMASK` | `99` / `100` / `000` | Ownership of created files (Unraid nobody:users) |
 
